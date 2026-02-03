@@ -72,6 +72,8 @@ export default function EmployeeHome() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [distanceM, setDistanceM] = useState<number | null>(null)
   const [radiusM, setRadiusM] = useState<number | null>(null)
+  const [lastGeo, setLastGeo] = useState<{ lat: number; lng: number; accuracyM: number | null } | null>(null)
+  const [overrideRequestStatus, setOverrideRequestStatus] = useState<'idle' | 'submitting' | 'sent' | 'error'>('idle')
   const [activeTab, setActiveTab] = useState<TabKey>('schedule')
 
   const [myShifts, setMyShifts] = useState<Shift[]>([])
@@ -197,6 +199,12 @@ export default function EmployeeHome() {
         })
       })
 
+      setLastGeo({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracyM: position.coords.accuracy,
+      })
+
       const res = await fetch('/api/clock/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -216,6 +224,8 @@ export default function EmployeeHome() {
           setError(
             `Outside store radius (${data.distanceM}m away; limit ${data.radiusM}m).`
           )
+          setDistanceM(data.distanceM ?? null)
+          setRadiusM(data.radiusM ?? null)
         } else if (data?.error === 'store_not_configured') {
           setError('Store location not configured.')
         } else {
@@ -299,6 +309,42 @@ export default function EmployeeHome() {
               Distance from store: {distanceM}m (limit {radiusM}m)
             </div>
           )}
+
+          {error?.includes('Outside store radius') && (
+            <button
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 disabled:opacity-40"
+              disabled={overrideRequestStatus === 'submitting' || !lastGeo}
+              onClick={async () => {
+                if (!lastGeo) return
+                setOverrideRequestStatus('submitting')
+                try {
+                  const res = await fetch('/api/override-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      requestedEventType: status === 'in' ? 'out' : 'in',
+                      lat: lastGeo.lat,
+                      lng: lastGeo.lng,
+                      accuracyM: lastGeo.accuracyM,
+                      distanceM,
+                      radiusM,
+                    }),
+                  })
+                  if (!res.ok) throw new Error('request_failed')
+                  setOverrideRequestStatus('sent')
+                } catch {
+                  setOverrideRequestStatus('error')
+                }
+              }}
+            >
+              {overrideRequestStatus === 'submitting'
+                ? 'Requesting…'
+                : overrideRequestStatus === 'sent'
+                  ? 'Override requested'
+                  : 'Request admin override'}
+            </button>
+          )}
+
           <div className="text-xs text-neutral-500">Earnings finalize on clock-out.</div>
       </Card>
 
