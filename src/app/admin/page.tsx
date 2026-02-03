@@ -62,7 +62,7 @@ export default function AdminPage() {
     <PageShell>
       <PageHeader
         title="Admin"
-        subtitle="Dashboard scaffolding (override requests, timesheets, schedules, tasks)."
+        subtitle="Dashboard (overview, overrides, timesheets, schedules, tasks)."
       >
         <div className="mt-3 text-sm">
           <Link className="font-semibold text-red-700 underline" href="/admin/timesheets">
@@ -86,6 +86,32 @@ export default function AdminPage() {
             href="/admin/schedule"
           >
             Manage shifts
+          </Link>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Admin tools
+        </h2>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/schedule"
+          >
+            Schedule
+          </Link>
+          <Link
+            className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/timesheets"
+          >
+            Timesheets
+          </Link>
+          <Link
+            className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/overview"
+          >
+            Overview
           </Link>
         </div>
       </Card>
