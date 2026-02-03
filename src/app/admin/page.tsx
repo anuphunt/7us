@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, PageHeader, PageShell } from '@/components/ui'
 
 export default function AdminPage() {
@@ -63,12 +64,31 @@ export default function AdminPage() {
         title="Admin"
         subtitle="Dashboard scaffolding (override requests, timesheets, schedules, tasks)."
       >
+        <div className="mt-3 text-sm">
+          <Link className="font-semibold text-red-700 underline" href="/admin/timesheets">
+            Timesheets
+          </Link>
+        </div>
         {!authLoading && authRole !== 'admin' && (
           <div className="mt-3 text-sm text-red-600">
             Admin access required. Please sign in with an admin account.
           </div>
         )}
       </PageHeader>
+
+      <Card className="p-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Schedules
+        </h2>
+        <div className="mt-4">
+          <Link
+            className="inline-flex rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/schedule"
+          >
+            Manage shifts
+          </Link>
+        </div>
+      </Card>
 
       <Card className="p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
