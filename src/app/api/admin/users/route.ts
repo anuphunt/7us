@@ -29,6 +29,22 @@ function getUserAgent(req: Request) {
   return req.headers.get('user-agent') ?? 'unknown'
 }
 
+export async function GET() {
+  const session = await getSessionFromRequest()
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const { data, error } = await supabaseServer
+    .from('users')
+    .select('id, user_id_short, role, active, name')
+    .order('user_id_short', { ascending: true })
+
+  if (error) return NextResponse.json({ error: 'server_error' }, { status: 500 })
+
+  return NextResponse.json({ users: data ?? [] })
+}
+
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req)

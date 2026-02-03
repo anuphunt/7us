@@ -82,6 +82,7 @@ export async function POST(req: Request) {
       .from('clock_events')
       .select('event_type, occurred_at')
       .eq('user_id', session.sub)
+      .is('deleted_at', null)
       .order('occurred_at', { ascending: false })
       .limit(1)
       .maybeSingle()
