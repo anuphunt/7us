@@ -23,4 +23,5 @@ This repo includes `netlify.toml` and uses `@netlify/plugin-nextjs`.
 Set env vars in Netlify:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SESSION_SECRET`
