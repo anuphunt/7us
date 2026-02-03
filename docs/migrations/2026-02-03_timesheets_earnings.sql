@@ -47,6 +47,21 @@ create table if not exists public.clock_events (
   deleted_at timestamptz
 );
 
+-- If the table existed from earlier iterations, ensure all new columns exist.
+alter table public.clock_events
+  add column if not exists store_id uuid references public.stores(id),
+  add column if not exists lat double precision,
+  add column if not exists lng double precision,
+  add column if not exists accuracy_m integer,
+  add column if not exists is_override boolean not null default false,
+  add column if not exists reason text,
+  add column if not exists created_by_user_id uuid references public.users(id),
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_by_user_id uuid references public.users(id),
+  add column if not exists updated_at timestamptz,
+  add column if not exists deleted_by_user_id uuid references public.users(id),
+  add column if not exists deleted_at timestamptz;
+
 create index if not exists clock_events_user_id_occurred_at_idx on public.clock_events (user_id, occurred_at desc);
 create index if not exists clock_events_store_id_occurred_at_idx on public.clock_events (store_id, occurred_at desc);
 create index if not exists clock_events_occurred_at_idx on public.clock_events (occurred_at desc);
