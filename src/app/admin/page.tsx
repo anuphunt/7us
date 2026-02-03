@@ -27,6 +27,7 @@ export default function AdminPage() {
   const [newUserId, setNewUserId] = useState('')
   const [newUserPin, setNewUserPin] = useState('')
   const [newUserRole, setNewUserRole] = useState<'employee' | 'admin'>('employee')
+  const [newUserRate, setNewUserRate] = useState('')
   const [userStatus, setUserStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [users, setUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -265,6 +266,12 @@ export default function AdminPage() {
           </Link>
           <Link
             className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/tasks"
+          >
+            Tasks
+          </Link>
+          <Link
+            className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
             href="/admin/timesheets"
           >
             Timesheets
@@ -378,11 +385,29 @@ export default function AdminPage() {
                 <option value="admin">Admin</option>
               </select>
             </label>
+            <label className="grid gap-1 text-sm">
+              Hourly rate (USD)
+              <input
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base"
+                inputMode="decimal"
+                value={newUserRate}
+                onChange={(e) =>
+                  setNewUserRate(e.target.value.replace(/[^0-9.]/g, ''))
+                }
+                placeholder="15.00"
+              />
+            </label>
             <button
               className="mt-2 rounded-full bg-red-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
               disabled={authRole !== 'admin'}
               onClick={async () => {
-                if (newUserId.length !== 2 || newUserPin.length !== 4) {
+                const rateValue = Number(newUserRate)
+                const needsRate = newUserRole === 'employee'
+                if (
+                  newUserId.length !== 2 ||
+                  newUserPin.length !== 4 ||
+                  (needsRate && (!Number.isFinite(rateValue) || rateValue <= 0))
+                ) {
                   setUserStatus('error')
                   return
                 }
@@ -394,6 +419,7 @@ export default function AdminPage() {
                       userId: newUserId,
                       pin: newUserPin,
                       role: newUserRole,
+                      hourlyRate: needsRate ? rateValue : null,
                     }),
                   })
                   setUserStatus(res.ok ? 'saved' : 'error')
@@ -409,7 +435,7 @@ export default function AdminPage() {
             )}
             {userStatus === 'error' && (
               <div className="text-sm text-red-600">
-                Enter a 2-digit ID and 4-digit password.
+                Enter a 2-digit ID, 4-digit password, and hourly rate.
               </div>
             )}
           </div>

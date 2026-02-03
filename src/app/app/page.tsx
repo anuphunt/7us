@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, PageHeader, PageShell } from '@/components/ui'
 
 type Status = 'out' | 'in'
@@ -63,6 +64,7 @@ function formatShiftTimeRange(startAt: string, endAt: string) {
 }
 
 export default function EmployeeHome() {
+  const router = useRouter()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [status, setStatus] = useState<Status>('out')
@@ -70,6 +72,7 @@ export default function EmployeeHome() {
   const [now, setNow] = useState<number>(() => Date.now())
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [distanceM, setDistanceM] = useState<number | null>(null)
   const [radiusM, setRadiusM] = useState<number | null>(null)
   const [lastGeo, setLastGeo] = useState<{ lat: number; lng: number; accuracyM: number | null } | null>(null)
@@ -251,6 +254,25 @@ export default function EmployeeHome() {
     }
   }
 
+  const onLogout = async () => {
+    if (isLoggingOut) return
+    setError(null)
+    setIsLoggingOut(true)
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' })
+      if (!res.ok) {
+        setError('Unable to log out. Please try again.')
+        return
+      }
+      setUser(null)
+      router.replace('/login')
+    } catch {
+      setError('Unable to log out. Please try again.')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <PageShell>
       <div className="flex items-start justify-between gap-3">
@@ -269,9 +291,20 @@ export default function EmployeeHome() {
             )}
           </div>
         </PageHeader>
-        <span className="mt-4 rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">
-          {status === 'in' ? 'On shift' : 'Off shift'}
-        </span>
+        <div className="mt-4 flex items-center gap-3">
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">
+            {status === 'in' ? 'On shift' : 'Off shift'}
+          </span>
+          {user && (
+            <button
+              className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-900"
+              onClick={onLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Logging out…' : 'Log out'}
+            </button>
+          )}
+        </div>
       </div>
       {!isAuthLoading && !user && (
         <p className="text-sm text-red-600">

@@ -99,6 +99,7 @@ export async function POST(req: Request) {
     const pin = String((body as { pin?: string }).pin ?? '')
     const role = ((body as { role?: string }).role ?? 'employee') as UserRole
     const name = (body as { name?: string }).name ? String((body as { name?: string }).name) : null
+    const hourlyRate = (body as { hourlyRate?: number | string | null }).hourlyRate ?? null
 
     if (userIdShort.length !== 2 || pin.length < 4) {
       await logAuthEvent({
@@ -126,6 +127,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid_role' }, { status: 400 })
     }
 
+    const rateValue =
+      hourlyRate === null || hourlyRate === undefined ? null : Number(hourlyRate)
+    if (role === 'employee' && rateValue !== null) {
+      if (!Number.isFinite(rateValue) || rateValue <= 0) {
+        return NextResponse.json({ error: 'invalid_rate' }, { status: 400 })
+      }
+    }
     const { data: existing } = await supabaseServer
       .from('users')
       .select('id')
@@ -170,6 +178,19 @@ export async function POST(req: Request) {
         reason: 'server_error',
       })
       return NextResponse.json({ error: 'server_error' }, { status: 500 })
+    }
+
+    if (role === 'employee' && rateValue !== null) {
+      const { error: rateError } = await supabaseServer.from('hourly_rates').insert({
+        user_id: data.id,
+        rate_cents: Math.round(rateValue * 100),
+        effective_from: new Date().toISOString(),
+      })
+
+      if (rateError) {
+        await supabaseServer.from('users').delete().eq('id', data.id)
+        return NextResponse.json({ error: 'rate_insert_failed' }, { status: 500 })
+      }
     }
 
     await logAuthEvent({
