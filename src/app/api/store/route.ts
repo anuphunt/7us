@@ -37,7 +37,8 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const session = verifySessionToken(cookies().get('session')?.value)
+    const jar = await cookies()
+    const session = verifySessionToken(jar.get('session')?.value)
     if (!session || session.role !== 'admin') {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }

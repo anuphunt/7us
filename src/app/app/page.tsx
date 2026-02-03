@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Card, PageHeader, PageShell } from '@/components/ui'
 
 type Status = 'out' | 'in'
 type TabKey = 'schedule' | 'tasks'
@@ -128,91 +129,98 @@ export default function EmployeeHome() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-8">
-      <header className="mx-auto flex max-w-md flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600">
-          7us
-        </p>
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-neutral-900">Clock</h1>
-          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">
-            {status === 'in' ? 'On shift' : 'Off shift'}
-          </span>
-        </div>
-        {!isAuthLoading && !user && (
-          <p className="text-sm text-red-600">
-            Please <Link className="underline" href="/login">sign in</Link> to clock in/out.
-          </p>
-        )}
-      </header>
-
-      <section className="mx-auto mt-10 flex max-w-md flex-col items-center gap-5">
-        <div className="text-sm text-neutral-600">
-          {status === 'in' && (
-            <>
-              Timer: <span className="font-mono">{elapsed ?? '00:00:00'}</span>
-            </>
-          )}
-          {status !== 'in' && 'Ready to start your shift.'}
-        </div>
-
-        <button
-          className={`flex h-48 w-48 items-center justify-center rounded-full text-xl font-semibold text-white shadow-lg transition ${
-            status === 'in' ? 'bg-black' : 'bg-red-600'
-          }`}
-          onClick={onToggle}
-          disabled={isSubmitting || !user}
-        >
-          {isSubmitting ? 'Checking…' : status === 'in' ? 'Clock Out' : 'Clock In'}
-        </button>
-
-        {error && <div className="text-sm text-red-600">{error}</div>}
-        {distanceM != null && radiusM != null && (
-          <div className="text-xs text-neutral-500">
-            Distance from store: {distanceM}m (limit {radiusM}m)
+    <PageShell>
+      <div className="flex items-center justify-between">
+        <PageHeader title="Clock">
+          <div className="mt-2 text-sm text-neutral-600">
+            {user?.name ? `Welcome, ${user.name}.` : 'Ready for your shift?'}
           </div>
-        )}
-        <div className="text-xs text-neutral-500">Earnings finalize on clock-out.</div>
-      </section>
+        </PageHeader>
+        <span className="mt-4 rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">
+          {status === 'in' ? 'On shift' : 'Off shift'}
+        </span>
+      </div>
+      {!isAuthLoading && !user && (
+        <p className="text-sm text-red-600">
+          Please{' '}
+          <Link className="underline" href="/login">
+            sign in
+          </Link>{' '}
+          to clock in/out.
+        </p>
+      )}
 
-      <section className="mx-auto mt-10 max-w-md">
-        <div className="flex rounded-full border border-neutral-200 bg-neutral-100 p-1">
-          <button
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
-              activeTab === 'schedule' ? 'bg-white text-neutral-900' : 'text-neutral-600'
-            }`}
-            onClick={() => setActiveTab('schedule')}
-          >
-            Schedule
-          </button>
-          <button
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
-              activeTab === 'tasks' ? 'bg-white text-neutral-900' : 'text-neutral-600'
-            }`}
-            onClick={() => setActiveTab('tasks')}
-          >
-            Tasks
-          </button>
-        </div>
+      <Card className="flex flex-col items-center gap-5 p-5">
+          <div className="text-sm text-neutral-600">
+            {status === 'in' && (
+              <>
+                Timer: <span className="font-mono">{elapsed ?? '00:00:00'}</span>
+              </>
+            )}
+            {status !== 'in' && 'Ready to start your shift.'}
+          </div>
 
-        <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-          {activeTab === 'schedule' ? (
-            <div className="space-y-3 text-sm text-neutral-600">
-              <div className="rounded-xl border border-dashed border-neutral-200 p-3">
-                No shifts scheduled yet.
-              </div>
-              <div className="text-xs text-neutral-400">Your next shift will appear here.</div>
-            </div>
-          ) : (
-            <div className="space-y-3 text-sm text-neutral-600">
-              <div className="rounded-xl border border-dashed border-neutral-200 p-3">
-                No tasks assigned yet.
-              </div>
-              <div className="text-xs text-neutral-400">Tasks will be listed by due date.</div>
+          <button
+            className={`flex h-48 w-48 items-center justify-center rounded-full text-xl font-semibold text-white shadow-lg transition ${
+              status === 'in' ? 'bg-black' : 'bg-red-600'
+            }`}
+            onClick={onToggle}
+            disabled={isSubmitting || !user}
+          >
+            {isSubmitting ? 'Checking…' : status === 'in' ? 'Clock Out' : 'Clock In'}
+          </button>
+
+          {error && <div className="text-sm text-red-600">{error}</div>}
+          {distanceM != null && radiusM != null && (
+            <div className="text-xs text-neutral-500">
+              Distance from store: {distanceM}m (limit {radiusM}m)
             </div>
           )}
-        </div>
+          <div className="text-xs text-neutral-500">Earnings finalize on clock-out.</div>
+      </Card>
+
+      <section>
+        <div className="flex rounded-full border border-neutral-200 bg-neutral-50 p-1">
+            <button
+              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
+                activeTab === 'schedule' ? 'bg-white text-neutral-900' : 'text-neutral-600'
+              }`}
+              onClick={() => setActiveTab('schedule')}
+            >
+              Schedule
+            </button>
+            <button
+              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
+                activeTab === 'tasks' ? 'bg-white text-neutral-900' : 'text-neutral-600'
+              }`}
+              onClick={() => setActiveTab('tasks')}
+            >
+              Tasks
+            </button>
+          </div>
+
+        <Card className="mt-4 p-4">
+            {activeTab === 'schedule' ? (
+              <div className="space-y-3 text-sm text-neutral-600">
+                <div className="rounded-xl border border-dashed border-neutral-200 p-3">
+                  No shifts scheduled yet.
+                </div>
+                <div className="text-xs text-neutral-400">
+                  Your next shift will appear here.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 text-sm text-neutral-600">
+                <div className="rounded-xl border border-dashed border-neutral-200 p-3">
+                  No tasks assigned yet.
+                </div>
+                <div className="text-xs text-neutral-400">
+                  Tasks will be listed by due date.
+                </div>
+              </div>
+            )}
+        </Card>
       </section>
-    </main>
+    </PageShell>
   )
 }

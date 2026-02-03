@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const secretKey = process.env.SUPABASE_SECRET_KEY
 
-if (!supabaseUrl || !serviceKey) {
+if (!supabaseUrl || !secretKey) {
   throw new Error('Missing Supabase environment variables for server usage.')
 }
 
-export const supabaseServer = createClient(supabaseUrl, serviceKey, {
+export const supabaseServer = createClient(supabaseUrl, secretKey, {
   auth: { persistSession: false },
 })

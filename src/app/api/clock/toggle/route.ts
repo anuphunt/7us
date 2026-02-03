@@ -35,7 +35,8 @@ async function getStore() {
 
 export async function POST(req: Request) {
   try {
-    const session = verifySessionToken(cookies().get('session')?.value)
+    const jar = await cookies()
+    const session = verifySessionToken(jar.get('session')?.value)
     if (!session) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }

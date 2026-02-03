@@ -1,7 +1,8 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, PageHeader, PageShell } from '@/components/ui'
 
 export default function LoginPage() {
   const [userId, setUserId] = useState('')
@@ -11,19 +12,13 @@ export default function LoginPage() {
   const router = useRouter()
 
   return (
-    <main className="min-h-screen bg-white px-6 py-10">
-      <div className="mx-auto flex max-w-sm flex-col gap-8">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600">
-            7us
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold text-neutral-900">Welcome back</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Sign in to clock in, view schedules, and finish tasks.
-          </p>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Welcome back"
+        subtitle="Sign in to clock in, view schedules, and finish tasks."
+      />
 
-        <div className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+      <Card className="space-y-4 p-5">
           <label className="block">
             <div className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
               User ID
@@ -84,12 +79,11 @@ export default function LoginPage() {
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
           {error && <div className="text-sm text-red-600">{error}</div>}
-        </div>
+      </Card>
 
         <p className="text-xs text-neutral-500">
           Need access? Ask your manager to create your account.
         </p>
-      </div>
-    </main>
+    </PageShell>
   )
 }

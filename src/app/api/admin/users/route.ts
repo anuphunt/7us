@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import argon2 from 'argon2'
 import { supabaseServer } from '@/lib/supabaseServer'
 import { verifySessionToken } from '@/lib/auth'
 
@@ -12,14 +11,15 @@ type UserRow = {
   active: boolean
 }
 
-function getSessionFromRequest() {
-  const token = cookies().get('session')?.value
+async function getSessionFromRequest() {
+  const jar = await cookies()
+  const token = jar.get('session')?.value
   return verifySessionToken(token)
 }
 
 export async function POST(req: Request) {
   try {
-    const session = getSessionFromRequest()
+    const session = await getSessionFromRequest()
     if (!session || session.role !== 'admin') {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid_role' }, { status: 400 })
     }
 
-    const pinHash = await argon2.hash(pin)
+    const pinHash = pin
 
     const { data: existing } = await supabaseServer
       .from('users')

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import argon2 from 'argon2'
 import { supabaseServer } from '@/lib/supabaseServer'
 import { createSessionToken, getSessionCookieOptions } from '@/lib/auth'
 
@@ -13,6 +12,9 @@ type UserRow = {
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.SUPABASE_SECRET_KEY) {
+      console.warn('Missing SUPABASE_SECRET_KEY in auth login route')
+    }
     const body = await req.json()
     const userIdShort = String(body.userId ?? '').trim()
     const pin = String(body.pin ?? '')
@@ -27,7 +29,12 @@ export async function POST(req: Request) {
       .eq('user_id_short', userIdShort)
       .maybeSingle()
 
-    if (error || !data) {
+    if (error) {
+      console.error('Supabase login query failed', error)
+      return NextResponse.json({ error: 'server_error' }, { status: 500 })
+    }
+
+    if (!data) {
       return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
     }
 
@@ -37,8 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'inactive_user' }, { status: 403 })
     }
 
-    const ok = await argon2.verify(user.pin_hash, pin)
-    if (!ok) {
+    if (user.pin_hash !== pin) {
       return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
     }
 

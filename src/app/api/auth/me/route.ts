@@ -12,7 +12,8 @@ type UserRow = {
 }
 
 export async function GET() {
-  const token = cookies().get('session')?.value
+  const jar = await cookies()
+  const token = jar.get('session')?.value
   const session = verifySessionToken(token)
   if (!session) {
     return NextResponse.json({ user: null })
