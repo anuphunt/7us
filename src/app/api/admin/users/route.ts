@@ -42,7 +42,37 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: 'server_error' }, { status: 500 })
 
-  return NextResponse.json({ users: data ?? [] })
+  const users = data ?? []
+  const userIds = users.map((u) => u.id)
+  const now = new Date().toISOString()
+  const rateByUserId = new Map<string, number>()
+
+  if (userIds.length > 0) {
+    const { data: rates } = await supabaseServer
+      .from('hourly_rates')
+      .select('user_id, rate_cents, effective_from, effective_to')
+      .in('user_id', userIds)
+      .lte('effective_from', now)
+      .or(`effective_to.is.null,effective_to.gt.${now}`)
+      .order('effective_from', { ascending: false })
+
+    ;(rates ?? []).forEach((row) => {
+      if (!rateByUserId.has(row.user_id)) {
+        rateByUserId.set(row.user_id, row.rate_cents)
+      }
+    })
+  }
+
+  return NextResponse.json({
+    users: users.map((u) => ({
+      id: u.id,
+      userId: u.user_id_short,
+      role: u.role,
+      active: u.active,
+      name: u.name,
+      rateCents: rateByUserId.get(u.id) ?? null,
+    })),
+  })
 }
 
 export async function POST(req: Request) {

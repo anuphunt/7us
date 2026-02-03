@@ -4,6 +4,19 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, PageHeader, PageShell } from '@/components/ui'
 
+type AdminUser = {
+  id: string
+  userId: string
+  role: 'admin' | 'employee'
+  active: boolean
+  name: string | null
+  rateCents: number | null
+  rateInput: string
+  pinInput: string
+  status: 'idle' | 'saving' | 'saved' | 'error'
+  statusMessage?: string
+}
+
 export default function AdminPage() {
   const [authRole, setAuthRole] = useState<'admin' | 'employee' | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -15,6 +28,40 @@ export default function AdminPage() {
   const [newUserPin, setNewUserPin] = useState('')
   const [newUserRole, setNewUserRole] = useState<'employee' | 'admin'>('employee')
   const [userStatus, setUserStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState<string | null>(null)
+
+  const loadUsers = async () => {
+    setUsersLoading(true)
+    setUsersError(null)
+    try {
+      const res = await fetch('/api/admin/users')
+      const data = await res.json()
+      if (!res.ok) {
+        setUsersError('Unable to load employees.')
+        return
+      }
+      const list = Array.isArray(data?.users) ? data.users : []
+      setUsers(
+        list.map((u: { id: string; userId: string; role: 'admin' | 'employee'; active: boolean; name: string | null; rateCents: number | null }) => ({
+          id: u.id,
+          userId: u.userId,
+          role: u.role,
+          active: u.active,
+          name: u.name,
+          rateCents: u.rateCents ?? null,
+          rateInput: u.rateCents != null ? (u.rateCents / 100).toFixed(2) : '',
+          pinInput: '',
+          status: 'idle',
+        }))
+      )
+    } catch {
+      setUsersError('Unable to load employees.')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -29,6 +76,10 @@ export default function AdminPage() {
           setLat(String(data.store.lat ?? ''))
           setLng(String(data.store.lng ?? ''))
           setRadiusM(String(data.store.radius_m ?? 200))
+        }
+
+        if (authData?.user?.role === 'admin') {
+          await loadUsers()
         }
       } catch {
         setStatus('error')
@@ -54,7 +105,118 @@ export default function AdminPage() {
 
       setStatus(res.ok ? 'saved' : 'error')
     } catch {
-      setStatus('error')
+    setStatus('error')
+  }
+}
+
+  const onSaveUser = async (user: AdminUser) => {
+    if (authRole !== 'admin') return
+
+    const rateInput = user.rateInput.trim()
+    let ratePayload: { hourlyRateCents?: number | null; clearHourlyRate?: boolean } = {}
+
+    if (rateInput === '' && user.rateCents != null) {
+      ratePayload = { hourlyRateCents: null, clearHourlyRate: true }
+    } else if (rateInput !== '') {
+      const rateValue = Number(rateInput)
+      if (!Number.isFinite(rateValue) || rateValue < 0) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === user.id
+              ? { ...u, status: 'error', statusMessage: 'Hourly rate must be a valid number.' }
+              : u
+          )
+        )
+        return
+      }
+      const nextCents = Math.round(rateValue * 100)
+      if (user.rateCents == null || nextCents !== user.rateCents) {
+        ratePayload = { hourlyRateCents: nextCents }
+      }
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === user.id ? { ...u, status: 'saving', statusMessage: undefined } : u
+      )
+    )
+
+    try {
+      const body: Record<string, unknown> = {
+        name: user.name ?? '',
+        userIdShort: user.userId,
+        ...ratePayload,
+      }
+      if (user.pinInput.trim().length > 0) {
+        body.pin = user.pinInput.trim()
+      }
+
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === user.id
+              ? { ...u, status: 'error', statusMessage: 'Unable to save employee.' }
+              : u
+          )
+        )
+        return
+      }
+
+      await loadUsers()
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? { ...u, status: 'saved', statusMessage: 'Saved.', pinInput: '' }
+            : u
+        )
+      )
+    } catch {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? { ...u, status: 'error', statusMessage: 'Unable to save employee.' }
+            : u
+        )
+      )
+    }
+  }
+
+  const onDeleteUser = async (user: AdminUser) => {
+    if (authRole !== 'admin') return
+    if (!window.confirm(`Delete ${user.name ?? `User ${user.userId}`}? This cannot be undone.`)) {
+      return
+    }
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === user.id ? { ...u, status: 'saving', statusMessage: undefined } : u
+      )
+    )
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === user.id
+              ? { ...u, status: 'error', statusMessage: 'Unable to delete employee.' }
+              : u
+          )
+        )
+        return
+      }
+      await loadUsers()
+    } catch {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? { ...u, status: 'error', statusMessage: 'Unable to delete employee.' }
+            : u
+        )
+      )
     }
   }
 
@@ -251,6 +413,148 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Manage Employees
+        </h2>
+        <div className="mt-2 text-xs text-neutral-500">
+          Edit name, ID, password, or hourly rate. Leave password empty to keep it unchanged.
+        </div>
+
+        {usersLoading && (
+          <div className="mt-4 text-sm text-neutral-600">Loading employees…</div>
+        )}
+        {usersError && (
+          <div className="mt-4 text-sm text-red-600">{usersError}</div>
+        )}
+
+        {!usersLoading && !usersError && users.filter((u) => u.role === 'employee').length === 0 && (
+          <div className="mt-4 text-sm text-neutral-600">No employees found.</div>
+        )}
+
+        {!usersLoading && !usersError && users.filter((u) => u.role === 'employee').length > 0 && (
+          <div className="mt-4 space-y-4">
+            {users
+              .filter((u) => u.role === 'employee')
+              .map((u) => (
+                <div key={u.id} className="rounded-2xl border border-neutral-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-neutral-900">
+                      {u.name ?? `User ${u.userId}`}
+                    </div>
+                    <div className="text-xs text-neutral-500">ID {u.userId}</div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3">
+                    <label className="grid gap-1 text-sm">
+                      Name
+                      <input
+                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-base"
+                        value={u.name ?? ''}
+                        onChange={(e) =>
+                          setUsers((prev) =>
+                            prev.map((user) =>
+                              user.id === u.id ? { ...user, name: e.target.value } : user
+                            )
+                          )
+                        }
+                        placeholder="Employee name"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      User ID (2 digits)
+                      <input
+                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-base"
+                        inputMode="numeric"
+                        maxLength={2}
+                        value={u.userId}
+                        onChange={(e) =>
+                          setUsers((prev) =>
+                            prev.map((user) =>
+                              user.id === u.id
+                                ? {
+                                    ...user,
+                                    userId: e.target.value.replace(/\\D/g, '').slice(0, 2),
+                                  }
+                                : user
+                            )
+                          )
+                        }
+                        placeholder="00"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      New password (4 digits)
+                      <input
+                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-base"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={u.pinInput}
+                        onChange={(e) =>
+                          setUsers((prev) =>
+                            prev.map((user) =>
+                              user.id === u.id
+                                ? {
+                                    ...user,
+                                    pinInput: e.target.value.replace(/\\D/g, '').slice(0, 4),
+                                  }
+                                : user
+                            )
+                          )
+                        }
+                        placeholder="1234"
+                        type="password"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      Hourly rate ($/hr)
+                      <input
+                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-base"
+                        inputMode="decimal"
+                        value={u.rateInput}
+                        onChange={(e) =>
+                          setUsers((prev) =>
+                            prev.map((user) =>
+                              user.id === u.id ? { ...user, rateInput: e.target.value } : user
+                            )
+                          )
+                        }
+                        placeholder="15.00"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                      disabled={u.status === 'saving' || authRole !== 'admin'}
+                      onClick={() => onSaveUser(u)}
+                    >
+                      {u.status === 'saving' ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 disabled:opacity-40"
+                      disabled={u.status === 'saving' || authRole !== 'admin'}
+                      onClick={() => onDeleteUser(u)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  {u.status === 'saved' && (
+                    <div className="mt-2 text-sm text-emerald-600">Saved.</div>
+                  )}
+                  {u.status === 'error' && (
+                    <div className="mt-2 text-sm text-red-600">
+                      {u.statusMessage ?? 'Unable to save employee.'}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
       </Card>
     </PageShell>
   )
